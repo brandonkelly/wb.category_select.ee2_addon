@@ -291,6 +291,9 @@ class Wb_category_select_ft extends EE_Fieldtype {
 	 */
 	function replace_tag($data, $params = array(), $tagdata = FALSE)
 	{
+		// ignore if no data selected
+		if (! $data) return;
+
 		// Establish Settings
 		$settings = (isset($this->settings['wb_category_select'])) ? $this->settings['wb_category_select'] : $this->settings;
 		$settings = $this->_default_settings($settings);
@@ -313,6 +316,7 @@ class Wb_category_select_ft extends EE_Fieldtype {
 		// pre_process() fallback for Matrix
 		if (is_string($data)) { $data = $this->pre_process($data); }
 		
+
 		// loop through the tag pair for each selected category,
 		// parsing the {category_id} tags
 		$parsed = $this->EE->TMPL->parse_variables($tagdata, $data);
@@ -324,6 +328,29 @@ class Wb_category_select_ft extends EE_Fieldtype {
 		}
 
 		return $parsed;
+	}
+
+	/**
+	 * Replace Name
+	 */
+	function replace_name($data, $params = array(), $tagdata = FALSE)
+	{
+		// ignore if no data selected
+		if (! $data) return;
+
+		// Establish Settings
+		$settings = (isset($this->settings['wb_category_select'])) ? $this->settings['wb_category_select'] : $this->settings;
+		$settings = $this->_default_settings($settings);
+
+		// if multiple selections aren't allowed, don't return anything
+		if ($settings['multi'] == 'y') return;
+
+		$name = $this->EE->db->select('cat_name')
+		                     ->where('cat_id', $data)
+		                     ->get('categories')
+		                     ->row('cat_name');
+
+		return $name;
 	}
 
 }
