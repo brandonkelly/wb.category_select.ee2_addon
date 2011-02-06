@@ -331,9 +331,9 @@ class Wb_category_select_ft extends EE_Fieldtype {
 	}
 
 	/**
-	 * Replace Name
+	 * Category attribute
 	 */
-	function replace_name($data, $params = array(), $tagdata = FALSE)
+	private function _cat_attr($data, $attr)
 	{
 		// ignore if no data selected
 		if (! $data) return;
@@ -345,12 +345,59 @@ class Wb_category_select_ft extends EE_Fieldtype {
 		// if multiple selections aren't allowed, don't return anything
 		if ($settings['multi'] == 'y') return;
 
-		$name = $this->EE->db->select('cat_name')
-		                     ->where('cat_id', $data)
-		                     ->get('categories')
-		                     ->row('cat_name');
+		$val = $this->EE->db->select($attr)
+		                    ->where('cat_id', $data)
+		                    ->get('categories');
 
-		return $name;
+		return $val->num_rows() ? $val->row($attr) : '';
+	}
+
+	/**
+	 * Replace Category Description
+	 */
+	function replace_description($data)
+	{
+		return $this->_cat_attr($data, 'cat_description');
+	}
+
+	/**
+	 * Replace Category ID
+	 */
+	function replace_id($data)
+	{
+		return $data;
+	}
+
+	/**
+	 * Replace Parent ID
+	 */
+	function replace_parent_id($data)
+	{
+		return $this->_cat_attr($data, 'parent_id');
+	}
+
+	/**
+	 * Replace Category Image
+	 */
+	function replace_image($data)
+	{
+		return $this->_cat_attr($data, 'cat_image');
+	}
+
+	/**
+	 * Replace Category Name
+	 */
+	function replace_name($data)
+	{
+		return $this->_cat_attr($data, 'cat_name');
+	}
+
+	/**
+	 * Replace Category URL Title
+	 */
+	function replace_url_title($data)
+	{
+		return $this->_cat_attr($data, 'cat_url_title');
 	}
 
 }
