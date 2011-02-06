@@ -258,95 +258,72 @@ class Wb_category_select_ft extends EE_Fieldtype {
 	// Tags --------------------------------------------------------------------
 
 	/**
-	 * Pre-process
-	 *
-	 * If multiple selections are allowed, this will turn the string of
-	 * category IDs into an array.
-	 */
-	function pre_process($data)
-	{
-		// Establish Settings
-		$settings = (isset($this->settings['wb_category_select'])) ? $this->settings['wb_category_select'] : $this->settings;
-		$settings = $this->_default_settings($settings);
-
-		// if multiple selections aren't allowed, just return the cat ID
-		if ($settings['multi'] != 'y') return $data;
-
-		$data = explode("\n", $data);
-
-		foreach ($data as &$cat)
-		{
-			$cat = array('category_id' => $cat);
-		}
-
-		return $data;
-	}
-
-	/**
 	 * Replace Tag
 	 *
-	 * If only a single category selection is allowed, this will just return
-	 * the selected category ID. Otherwise, it'll loop through the tag pair,
-	 * parsing the {category_id} single variable tags.
+	 * If this is just a single tag, this will return a delimited list of
+	 * category IDs. If it's a tag pair, it'll grab all the info about each
+	 * category, and parse out the same category-specific variables that the
+	 * Channel Categories tag does.
+	 * 
+	 * http://expressionengine.com/user_guide/modules/channel/categories.html
 	 */
 	function replace_tag($data, $params = array(), $tagdata = FALSE)
 	{
 		// ignore if no data selected
 		if (! $data) return;
 
-		// Establish Settings
-		$settings = (isset($this->settings['wb_category_select'])) ? $this->settings['wb_category_select'] : $this->settings;
-		$settings = $this->_default_settings($settings);
+		$cat_ids = explode("\n", $data);
 
-		// if multiple selections aren't allowed, just return the cat ID
-		if ($settings['multi'] != 'y') { return $data; }
-		
-		// check for tagdata, if no tagdata, spit out a pipe separated list of the category ids
-		if ($tagdata === FALSE) {
-			$categories = array();
-			
-			foreach ($data as $array) 
-			{
-				$categories[] = $array['category_id'];
-			}
-			
-			return implode('|', $categories);
+		if (! $tagdata)
+		{
+			// just return a list of the cat_id's
+			$delimiter = isset($params['delimiter']) ? $params['delimiter'] : '|';
+			return implode($delimiter, $cat_ids);
 		}
-		
-		// pre_process() fallback for Matrix
-		if (is_string($data)) { $data = $this->pre_process($data); }
-		
 
-		// loop through the tag pair for each selected category,
-		// parsing the {category_id} tags
-		$parsed = $this->EE->TMPL->parse_variables($tagdata, $data);
+		$query = $this->EE->db->where_in('cat_id', $cat_ids)
+		                      ->get('categories');
+
+		foreach ($query->result() as $cat)
+		{
+			$cat_vars[] = array(
+				'category_description' => $cat->cat_description,
+				'category_id'          => $cat->cat_id,
+				'parent_id'            => $cat->parent_id,
+				'category_image'       => $cat->cat_image,
+				'category_name'        => $cat->cat_name,
+				'category_url_title'   => $cat->cat_url_title
+			);
+		}
+
+		$r = $this->EE->TMPL->parse_variables($tagdata, $cat_vars);
 
 		// backspace= param
 		if (isset($params['backspace']) && $params['backspace'])
 		{
-			$parsed = substr($parsed, 0, -$params['backspace']);
+			$r = substr($parsed, 0, -$params['backspace']);
 		}
 
-		return $parsed;
+		return $r;
 	}
 
 	/**
 	 * Category attribute
+	 * 
+	 * This returns one single attribute about a category. Used by the
+	 * :description, :parent_id, :image, :name, and :url_title tags
 	 */
 	private function _cat_attr($data, $attr)
 	{
 		// ignore if no data selected
 		if (! $data) return;
 
-		// Establish Settings
-		$settings = (isset($this->settings['wb_category_select'])) ? $this->settings['wb_category_select'] : $this->settings;
-		$settings = $this->_default_settings($settings);
-
-		// if multiple selections aren't allowed, don't return anything
-		if ($settings['multi'] == 'y') return;
+		// just look at the first category
+		$cat_ids = explode("\n", $data);
+		$cat_id = $cat_ids[0];
 
 		$val = $this->EE->db->select($attr)
-		                    ->where('cat_id', $data)
+		                    ->where('cat_id', $cat_id)
 		                    ->get('categories');
 
 		return $val->num_rows() ? $val->row($attr) : '';
